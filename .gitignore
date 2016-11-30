@@ -1,3 +1,4 @@
+.idea
 *.pickle
 *.pid
 _trial_temp
