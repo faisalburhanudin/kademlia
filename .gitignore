@@ -8,3 +8,4 @@ build
 dist
 kademlia.egg-info
 docs/_build
+.cache/
