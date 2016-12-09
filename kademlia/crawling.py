@@ -30,7 +30,6 @@ class SpiderCrawl(object):
         self.log.info("creating spider with peers: %s" % peers)
         self.nearest.push(peers)
 
-
     async def _find(self, rpcmethod):
         """
         Get either a value or list of nodes.
@@ -59,7 +58,10 @@ class SpiderCrawl(object):
             ds[peer.id] = rpcmethod(peer, self.node)
             self.nearest.markContacted(peer)
         found = await gather_dict(ds)
-        return await self._nodesFound(found)
+        return await self._nodes_found(found)
+
+    def _nodes_found(self, found):
+        raise NotImplementedError
 
 
 class ValueSpiderCrawl(SpiderCrawl):
@@ -75,47 +77,47 @@ class ValueSpiderCrawl(SpiderCrawl):
         """
         return await self._find(self.protocol.callFindValue)
 
-    async def _nodesFound(self, responses):
+    async def _nodes_found(self, responses):
         """
         Handle the result of an iteration in _find.
         """
         toremove = []
-        foundValues = []
+        found_values = []
         for peerid, response in responses.items():
             response = RPCFindResponse(response)
             if not response.happened():
                 toremove.append(peerid)
-            elif response.hasValue():
-                foundValues.append(response.getValue())
+            elif response.has_value():
+                found_values.append(response.has_value())
             else:
                 peer = self.nearest.getNodeById(peerid)
                 self.nearestWithoutValue.push(peer)
-                self.nearest.push(response.getNodeList())
+                self.nearest.push(response.get_node_list())
         self.nearest.remove(toremove)
 
-        if len(foundValues) > 0:
-            return await self._handleFoundValues(foundValues)
+        if len(found_values) > 0:
+            return await self._handle_found_values(found_values)
         if self.nearest.allBeenContacted():
             # not found!
             return None
         return await self.find()
 
-    async def _handleFoundValues(self, values):
+    async def _handle_found_values(self, values):
         """
         We got some values!  Exciting.  But let's make sure
         they're all the same or freak out a little bit.  Also,
         make sure we tell the nearest node that *didn't* have
         the value to store it.
         """
-        valueCounts = Counter(values)
-        if len(valueCounts) != 1:
+        value_counts = Counter(values)
+        if len(value_counts) != 1:
             args = (self.node.long_id, str(values))
             self.log.warning("Got multiple values for key %i: %s" % args)
-        value = valueCounts.most_common(1)[0][0]
+        value = value_counts.most_common(1)[0][0]
 
-        peerToSaveTo = self.nearestWithoutValue.popleft()
-        if peerToSaveTo is not None:
-            await self.protocol.callStore(peerToSaveTo, self.node.id, value)
+        peer_to_save_to = self.nearestWithoutValue.popleft()
+        if peer_to_save_to is not None:
+            await self.protocol.callStore(peer_to_save_to, self.node.id, value)
         return value
 
 
@@ -126,7 +128,7 @@ class NodeSpiderCrawl(SpiderCrawl):
         """
         return await self._find(self.protocol.callFindNode)
 
-    async def _nodesFound(self, responses):
+    async def _nodes_found(self, responses):
         """
         Handle the result of an iteration in _find.
         """
@@ -136,7 +138,7 @@ class NodeSpiderCrawl(SpiderCrawl):
             if not response.happened():
                 toremove.append(peerid)
             else:
-                self.nearest.push(response.getNodeList())
+                self.nearest.push(response.get_node_list())
         self.nearest.remove(toremove)
 
         if self.nearest.allBeenContacted():
@@ -162,13 +164,13 @@ class RPCFindResponse(object):
         """
         return self.response[0]
 
-    def hasValue(self):
+    def has_value(self):
         return isinstance(self.response[1], dict)
 
-    def getValue(self):
+    def get_value(self):
         return self.response[1]['value']
 
-    def getNodeList(self):
+    def get_node_list(self):
         """
         Get the node list in the response.  If there's no value, this should
         be set.
