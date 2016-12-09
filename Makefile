@@ -1,7 +1,7 @@
 PYDOCTOR=pydoctor
 
-test: lint
-	py.test --cov-report term-missing --cov=cermin -x
+test:
+	py.test --cov-report term-missing --cov=kademlia -x
 
 lint:
 	flake8 kademlia
