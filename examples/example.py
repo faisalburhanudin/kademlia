@@ -11,21 +11,23 @@ loop.set_debug(True)
 server = Server()
 server.listen(8468)
 
+
 def done(result):
     print("Key result:", result)
 
-def setDone(result, server):
+
+def set_done(result, server):
     server.get("a key").addCallback(done)
 
-def bootstrapDone(found, server):
-    server.set("a key", "a value").addCallback(setDone, server)
 
-#server.bootstrap([("1.2.3.4", 8468)]).addCallback(bootstrapDone, server)
+def bootstrap_done(found, server):
+    server.set("a key", "a value").addCallback(set_done, server)
+
+# server.bootstrap([("1.2.3.4", 8468)]).addCallback(bootstrapDone, server)
 
 try:
     loop.run_forever()
 except KeyboardInterrupt:
     pass
 
-server.close()
 loop.close()
